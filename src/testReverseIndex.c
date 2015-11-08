@@ -3,6 +3,14 @@
 #include <wchar.h>
 #include "ReverseIndex.h"
 
+/*
+   Função hash simplista
+
+   key	chave tipo string para se calcular o hash
+   length comprimento da chave
+
+   retorna o valor hash
+  */
 size_t hash(const char *key, size_t length) {
 	int hashCode = 0;
 	for (size_t i = 0; i < length; ++i)
@@ -10,6 +18,10 @@ size_t hash(const char *key, size_t length) {
 	return hashCode;
 }
 
+/* Função que mostra no console as entradas na tabela hash para uma determinada consulta
+   indexTable	tabela com os indices invertidos
+   key		chave do tipo string para consulta
+*/
 void showReverseIndex(ReverseIndex * indexTable, const char *key) {
 	printf("%s: ", key);
 	LinkedList * occurrenceList = getDocumentOccurrence(indexTable, key);
@@ -24,7 +36,7 @@ void showReverseIndex(ReverseIndex * indexTable, const char *key) {
 	printf("\n");
 }
 
-
+/* Testa a estrutura básica da tabela hash de indices invertidos */
 void testBasicStructure() {
 	ReverseIndex * indexTable = newReverseIndex(60, hash);
 	DocumentOccurrence * occurrence = newDocumentOccurrence("doc2", 5);
@@ -42,6 +54,7 @@ void testBasicStructure() {
 	showReverseIndex(indexTable, "bird");
 }
 
+/* Testa a compilação de strings para o preenchimento da tabela hash de indices invertidos */
 void testFillReverseIndex() {
 	ReverseIndex * indexTable = newReverseIndex(60, hash);
 	fillReverseIndex(indexTable, "cat dog cat", "doc1");
@@ -54,6 +67,11 @@ void testFillReverseIndex() {
 	showReverseIndex(indexTable, "bird");
 }
 
+/* Substitui acentos e demais caracteres especiais
+   wc	caractere que pode conter acentos e outros caracteres especiais
+
+   retorna uma versão ASC compatível para o caractere
+   */
 char wcharToChar(wint_t wc) {
 	wchar_t *wide = "àâêôûãõáéíóúçüÀÂÊÔÛÃÕÁÉÍÓÚÇÜ";
 	char *asc =	 "aaeouaoaeioucuAAEOUAOAEIOUCU";
@@ -63,6 +81,7 @@ char wcharToChar(wint_t wc) {
 			return asc[i];
 }
 
+/* Testa a compilação de arquivos para o preenchimento da tabela hash de indices invertidos */
 void testFillReverseIndexInputed() {
 	ReverseIndex * indexTable = newReverseIndex(60, hash);
 
@@ -75,7 +94,7 @@ void testFillReverseIndexInputed() {
 		FILE * file = fopen(name, "r");
 		if (file) {
 			while (!feof(file)) {
-				char buffer[255];
+				char buffer[500];
 				size_t bufferSize = 0;
 				size_t lastSeparator = 0;
 				for (char ch = wcharToChar(getwc(file)) ;
@@ -86,6 +105,8 @@ void testFillReverseIndexInputed() {
 					buffer[bufferSize] = ch;
 				}
 
+				//XXX partial words can be lost, if the word are between this buffer and another
+				// 500 character size buffer works to short abstracts without problem
 				printf("%u bytes readed\n", bufferSize);
 				fillReverseIndex(indexTable, buffer, name);
 			}
@@ -106,5 +127,5 @@ void testFillReverseIndexInputed() {
 
 
 int main() {
-	testFillReverseIndexInputed();
+	testFillReverseIndexInputed(); // a função principal testando o preenchimento da tabela de indices invertidos por meio de arquivos
 }

@@ -22,6 +22,12 @@ struct ReverseIndex {
 
 #define KEY_SIZE 20
 
+/* cria uma instância para a estrutura que representa a ocorrência de uma chave em um documento
+   doc_id	identificador do documento
+   count	número de ocorrências no documento
+
+   retorna a instância
+   */
 DocumentOccurrence * newDocumentOccurrence(const char * doc_id, const size_t count) {
 	DocumentOccurrence * occurrence = malloc(sizeof(DocumentOccurrence));
 	occurrence->doc_id = calloc(sizeof(char), KEY_SIZE);
@@ -29,9 +35,18 @@ DocumentOccurrence * newDocumentOccurrence(const char * doc_id, const size_t cou
 	occurrence->count = count;
 	return occurrence;
 }
+/* deleta a instância da estrutura que representa a ocorrência de uma palavra no documento liberando a memórica
+   occurrence	instância
+   */
 void deleteDocumentOccurrence(DocumentOccurrence * occurrence) {
 	free(occurrence);
 }
+/* cria instância para estrutura que representa a tabela hash de indices invertidos
+   entries	capacidade da tabela hash
+   hash		função hash utilizada pela estrutura
+
+   retorna a instância
+   */
 ReverseIndex * newReverseIndex(size_t entries, ReverseIndexHash hash) {
 	ReverseIndex * indexTable = malloc(sizeof(ReverseIndex));
 	indexTable->occurenceLists = calloc(entries, sizeof(LinkedList *));
@@ -42,6 +57,9 @@ ReverseIndex * newReverseIndex(size_t entries, ReverseIndexHash hash) {
 	indexTable->hash = hash;
 	return indexTable;
 }
+/* desaloca memória para a tabela de indices invertidos
+   indexTable	tabela hash de indices invertidos
+   */
 void deleteReverseIndex(ReverseIndex * indexTable) {
 	for (size_t i = 0; i < indexTable->capacity; ++i)
 		if (indexTable->occurenceLists[i])
@@ -49,10 +67,21 @@ void deleteReverseIndex(ReverseIndex * indexTable) {
 	free(indexTable->occurenceLists);
 	free(indexTable);
 }
+/* função de comparação que diz qual occorrência deve preceder em uma lista de ocorrência para dada chave
+   occurrence		ocorrência que será inserida na lista
+   occurrenceOnList	ocorrência pertence à lista
+
+   retorna um valor diferente de zero se occurrence preceder occurrenceOnList
+   */
 int frequentDocumentOccurrence(void * occurrence, void * occurrenceOnList) {
 	int result = strcmp(((DocumentOccurrence *) occurrence)->doc_id, ((DocumentOccurrence *) occurrenceOnList)->doc_id);
 	return result > 0;
 }
+/* função que formata a chave para específicos 20 caracteres cujo menores tamanhos são preenchidos com vazios (caracter nulo)
+   key	chave a ser formatada
+
+   retorna a chave formatada
+   */
 const char * formatKey(const char * key) {
 	char *validKey = malloc(20);
 	int i;
@@ -62,6 +91,12 @@ const char * formatKey(const char * key) {
 		validKey[i] = 0;
 	return validKey;
 }
+
+/* insere uma ocorrência na tabela de indices invertidos
+   indexTable	tabela hash de indices invertidos
+   key		chave, palavra indexada
+   occurrence	ocorrência a ser inserida
+   */
 void insertDocumentOccurrence(ReverseIndex * indexTable, const char * key, DocumentOccurrence * occurrence) {
 	key = formatKey(key);
 	size_t index = indexTable->hash(key, 20) % indexTable->capacity;
@@ -69,6 +104,12 @@ void insertDocumentOccurrence(ReverseIndex * indexTable, const char * key, Docum
 		indexTable->occurenceLists[index] = newLinkedList();
 	insertStructElementOrdered(indexTable->occurenceLists[index], occurrence, sizeof(DocumentOccurrence), frequentDocumentOccurrence, atRight);
 }
+/* pega a lista de ocorrências para uma determinada palavra
+   indexTable	tabela de indices invertidos
+   key		palavra a ser buscada
+
+   retorna a lista de ocorrência para a palavra buscada no indice
+   */
 LinkedList * getDocumentOccurrence(ReverseIndex * indexTable, const char * key) {
 	key = formatKey(key);
 	size_t index = indexTable->hash(key, 20) % indexTable->capacity;
@@ -81,6 +122,12 @@ struct WordFrequence {
 	size_t count;
 };
 
+/* cria uma nova instância de estrutura que define o par palavra e número de ocorrências
+   word		palavra encontrada
+   count	número de vezes que a palavra foi encontrada
+
+   retorna instância
+   */
 WordFrequence * newWordFrequence(const char *word, size_t count) {
 	WordFrequence *wordFrequence = malloc(sizeof(WordFrequence));
 	wordFrequence->word = malloc(20);
@@ -90,18 +137,41 @@ WordFrequence * newWordFrequence(const char *word, size_t count) {
 	return wordFrequence;
 }
 
+/* compara uma palavra a palavra contida em uma estrutura de frequencia
+   value	palavra verificada
+   valueOnList	estrutura que contem palavra e frequência
+
+   retorna um valor diferente de 0 se a palavra corresponde a estrutura
+   */
 int wordFrequenceEqual(void * value, void * valueOnList) {
 	return strcmp((char *) value, ((WordFrequence *) valueOnList)->word) == 0;
 }
 
+/* compara um identificador de documento a uma occorrência
+   doc_id		identificador
+   occurrenceOnList	ocorrência que pode referir a um documento
+
+   retorna um valor diferente de zero se o identificador passado corresponde a ocorrência
+   */
 int occurrenceEqual(void * doc_id, void * occurrenceOnList) {
 	return strcmp((char *) doc_id, ((DocumentOccurrence *) occurrenceOnList)->doc_id) == 0;
 }
 
+/* comparação entre ocorrências que determina qual vem primeiro na ordeção
+   value	occorrência sendo inserida
+   valueOnList	ocorrência já pertencente a lista
+
+   retorna um valor diferente de zero se value é a precedente
+   */
 int occurrenceGreater(void * value, void * valueOnList) {
-	return ((DocumentOccurrence *) value)->count > ((DocumentOccurrence *) valueOnList)->count;
+	return strcmp(((DocumentOccurrence *) value)->doc_id, ((DocumentOccurrence *) valueOnList)->doc_id) == 0;
 }
 
+/* preenche uma tabela hash de indices invertidos partindo de uma string
+   indexTable	tabela hash de indices invertidos
+   str		string a ser compilada
+   doc_id	identificador do documento
+   */
 void fillReverseIndex(ReverseIndex * indexTable, const char * str, const char * doc_id) {
 	LinkedList * words = newLinkedList();
 
