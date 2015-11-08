@@ -2,6 +2,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include "LinkedList.h"
 
 typedef struct DocumentOccurrence DocumentOccurrence;
@@ -49,7 +50,8 @@ void deleteReverseIndex(ReverseIndex * indexTable) {
 	free(indexTable);
 }
 int frequentDocumentOccurrence(void * occurrence, void * occurrenceOnList) {
-	return ((DocumentOccurrence *) occurrence)->count > ((DocumentOccurrence *) occurrenceOnList)->count;
+	int result = strcmp(((DocumentOccurrence *) occurrence)->doc_id, ((DocumentOccurrence *) occurrenceOnList)->doc_id);
+	return result > 0;
 }
 const char * formatKey(const char * key) {
 	char *validKey = malloc(20);
@@ -65,10 +67,84 @@ void insertDocumentOccurrence(ReverseIndex * indexTable, const char * key, Docum
 	size_t index = indexTable->hash(key, 20) % indexTable->capacity;
 	if (!indexTable->occurenceLists[index])
 		indexTable->occurenceLists[index] = newLinkedList();
-	insertElementOrdered(indexTable->occurenceLists[index], occurrence, frequentDocumentOccurrence, atLeft);
+	insertStructElementOrdered(indexTable->occurenceLists[index], occurrence, sizeof(DocumentOccurrence), frequentDocumentOccurrence, atRight);
 }
 LinkedList * getDocumentOccurrence(ReverseIndex * indexTable, const char * key) {
 	key = formatKey(key);
 	size_t index = indexTable->hash(key, 20) % indexTable->capacity;
 	return indexTable->occurenceLists[index];
+}
+
+typedef struct WordFrequence WordFrequence;
+struct WordFrequence {
+	const char * word;
+	size_t count;
+};
+
+WordFrequence * newWordFrequence(const char *word, size_t count) {
+	WordFrequence *wordFrequence = malloc(sizeof(WordFrequence));
+	wordFrequence->word = malloc(20);
+	strcpy(wordFrequence->word, word);
+	wordFrequence->count = count;
+
+	return wordFrequence;
+}
+
+int wordFrequenceEqual(void * value, void * valueOnList) {
+	return strcmp((char *) value, ((WordFrequence *) valueOnList)->word) == 0;
+}
+
+int occurrenceEqual(void * doc_id, void * occurrenceOnList) {
+	return strcmp((char *) doc_id, ((DocumentOccurrence *) occurrenceOnList)->doc_id) == 0;
+}
+
+int occurrenceGreater(void * value, void * valueOnList) {
+	return ((DocumentOccurrence *) value)->count > ((DocumentOccurrence *) valueOnList)->count;
+}
+
+void fillReverseIndex(ReverseIndex * indexTable, const char * str, const char * doc_id) {
+	LinkedList * words = newLinkedList();
+
+	// get words and quantities from str
+	while (*str) {
+		if (!isalnum(*str)) {
+			++str;
+			continue;
+		}
+
+		size_t word_i = 0;
+		char * word = malloc(20);
+		for (; word_i < 20 && isalnum(*str); ++str, ++word_i)
+			word[word_i] = (char) tolower(*str);
+		while (word_i < 20)
+			word[word_i++] = '\0';
+
+		WordFrequence * found = ((WordFrequence *) searchElement(words, word, wordFrequenceEqual));
+		if (found)
+			++(found->count);
+		else
+			pushBackStructElement(words, newWordFrequence(word, 1), sizeof(WordFrequence));
+	}
+
+	LinkedListIterator * iterator = newLinkedListIterator(words);
+	while(hasNext(iterator)) {
+		WordFrequence * wordFrequence = getValue(iterator);
+
+	// procurar estas palavras no indice invertido
+		LinkedList * occurrenceList = getDocumentOccurrence(indexTable, wordFrequence->word);
+	// se encontrar lista com essa entrada percorrer a lista buscando o doc_id
+		if (occurrenceList) {
+			DocumentOccurrence * found = searchElement(occurrenceList, doc_id, occurrenceEqual);
+	// se encontrar o doc_id somar a occorrencia das palavras
+			if (found)
+				found->count += wordFrequence->count;
+	// se nao encontrar o doc_id adicionar entrada na lista com o doc_id e a quantidade
+			else
+				insertDocumentOccurrence(indexTable, wordFrequence->word,
+					newDocumentOccurrence(doc_id, wordFrequence->count));
+	// se nao entrada da palavra inserir no indice uma entrada com o doc_id e a quantidade
+		} else
+			insertDocumentOccurrence(indexTable, wordFrequence->word,
+					newDocumentOccurrence(doc_id, wordFrequence->count));
+	}
 }

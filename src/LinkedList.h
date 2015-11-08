@@ -81,7 +81,7 @@ Node *searchNode(LinkedList * list, void * value,  CompareFunction compare) {
 	return 0;
 }	
 enum Side { atLeft = 0, atRight = 1};
-void insertElementOrdered(LinkedList * list, void * value, size_t valueSize, CompareFunction compare, int side) {
+void insertStructElementOrdered(LinkedList * list, void * value, size_t valueSize, CompareFunction compare, int side) {
 	Node * found = searchNode(list, value, compare);
 	if (!found && list->size > 0)
 		found = list->end;
@@ -91,7 +91,12 @@ void insertElementOrdered(LinkedList * list, void * value, size_t valueSize, Com
 	else
 		insertNextNode(list, found, node);
 }
-#define insertElementOrdered(LIST, VALUE, COMPARE, SIDE) insertElementOrdered(LIST, VALUE, sizeof(VALUE), COMPARE, SIDE)
+#define insertElementOrdered(LIST, VALUE, COMPARE, SIDE) insertStructElementOrdered(LIST, VALUE, sizeof(VALUE), COMPARE, SIDE)
+void pushBackStructElement(LinkedList * list, void * value, size_t valueSize) {
+	Node * node = newNode(value, valueSize);
+	insertNextNode(list, list->end, node);
+}
+#define pushBackElement(LIST, VALUE) pushBackStructElement(LIST, VALUE, sizeof(VALUE))
 void removeNode(LinkedList *list, Node * node) {
 	if (!node)
 		return;
