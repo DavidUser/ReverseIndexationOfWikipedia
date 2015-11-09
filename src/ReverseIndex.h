@@ -20,6 +20,7 @@ struct ReverseIndex {
 	ReverseIndexHash hash;
 };
 
+#define DOC_ID_SIZE 200
 #define KEY_SIZE 20
 
 /* cria uma instância para a estrutura que representa a ocorrência de uma chave em um documento
@@ -30,8 +31,8 @@ struct ReverseIndex {
    */
 DocumentOccurrence * newDocumentOccurrence(const char * doc_id, const size_t count) {
 	DocumentOccurrence * occurrence = malloc(sizeof(DocumentOccurrence));
-	occurrence->doc_id = calloc(sizeof(char), KEY_SIZE);
-	memcpy(occurrence->doc_id, doc_id, KEY_SIZE);
+	occurrence->doc_id = calloc(sizeof(char), DOC_ID_SIZE);
+	memcpy(occurrence->doc_id, doc_id, DOC_ID_SIZE);
 	occurrence->count = count;
 	return occurrence;
 }
