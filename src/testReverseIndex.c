@@ -19,20 +19,35 @@ size_t hash(const char *key, size_t length) {
 	return hashCode;
 }
 
-/* Função que mostra no console as entradas na tabela hash para uma determinada consulta
+/* Função que mostra no console as entradas na tabela hash para uma determinada consulta,
+   o termo buscado serve para calcular o peso de cada documento
    indexTable	tabela com os indices invertidos
    key		chave do tipo string para consulta
 */
 void showReverseIndex(ReverseIndex * indexTable, const char *key) {
 	printf("%s: ", key);
 	LinkedList * occurrenceList = getDocumentOccurrence(indexTable, key);
-
 	if (occurrenceList) {
+		//calcula os pesos de cada documento, documentos sem o termo tem peso 0 e não precisam ser computados
+		double * weigthts = weighsOccurrences(indexTable, occurrenceList);
+		size_t * rank = calloc(occurrenceList->size, sizeof(size_t));
+		for (int i = 0; i < occurrenceList->size; ++i)
+			for (int j = 0; j < occurrenceList->size; ++j)
+				if (weigthts[i] < weigthts[j] || (weigthts[i] == weigthts[j] && i < j))
+					++rank[i];
+		
+		// constroi um vetor de ponteiros ordenado pela relevancia de cada documento
+		DocumentOccurrence ** occurrencesSorted = calloc(occurrenceList->size, sizeof(DocumentOccurrence *));
+		int sortedIndex = 0;
 		LinkedListIterator * it = newLinkedListIterator(occurrenceList);
 		while (hasNext(it)) {
 			DocumentOccurrence * occurrence = (DocumentOccurrence *) getValue(it);
-			printf("<%u, %s> ", occurrence->count, occurrence->doc_id);
+			occurrencesSorted[rank[sortedIndex++]] = occurrence;
 		}
+
+		// percorre o vetor ordenado pela relevancia imprimindo no console
+		for (int i = 0; i < occurrenceList->size; ++i)
+			printf("<%u, %s> ", occurrencesSorted[i]->count, occurrencesSorted[i]->doc_id);
 	}
 	printf("\n");
 }
@@ -185,6 +200,8 @@ void testReadShortAbstracts() {
 			size_t bufferSize = 0;
 			getline(&entrie, &bufferSize, file);
 
+			if (entrie[0] != '<') // if it is't a entrie
+				continue;
 			// get doc id
 			char doc_id[500];
 			size_t doc_idSize = 0;

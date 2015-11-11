@@ -4,6 +4,7 @@
 #include <string.h>
 #include <ctype.h>
 #include "LinkedList.h"
+#include <math.h>
 
 typedef struct DocumentOccurrence DocumentOccurrence;
 struct DocumentOccurrence {
@@ -104,6 +105,7 @@ void insertDocumentOccurrence(ReverseIndex * indexTable, const char * key, Docum
 	if (!indexTable->occurenceLists[index])
 		indexTable->occurenceLists[index] = newLinkedList();
 	insertStructElementOrdered(indexTable->occurenceLists[index], occurrence, sizeof(DocumentOccurrence), frequentDocumentOccurrence, atRight);
+	++(indexTable->size);
 }
 /* pega a lista de ocorrências para uma determinada palavra
    indexTable	tabela de indices invertidos
@@ -199,7 +201,7 @@ void fillReverseIndex(ReverseIndex * indexTable, const char * str, const char * 
 
 	LinkedListIterator * iterator = newLinkedListIterator(words);
 	while(hasNext(iterator)) {
-		WordFrequence * wordFrequence = getValue(iterator);
+		WordFrequence * wordFrequence = (WordFrequence *) getValue(iterator);
 
 	// procurar estas palavras no indice invertido
 		LinkedList * occurrenceList = getDocumentOccurrence(indexTable, wordFrequence->word);
@@ -218,4 +220,23 @@ void fillReverseIndex(ReverseIndex * indexTable, const char * str, const char * 
 			insertDocumentOccurrence(indexTable, wordFrequence->word,
 					newDocumentOccurrence(doc_id, wordFrequence->count));
 	}
+}
+
+/* Calcula o peso de cada documento para um termo o qual a lista de ocorrencias é parametro
+   indexTable	tablela de indices
+   occurrences	lista com as ocorrências do termo nos documentos
+
+   retorna um vetor com os pesos correspondentes de cada documento
+   */
+double * weighsOccurrences(ReverseIndex * indexTable, LinkedList * occurrences) {
+	double * weights = calloc(occurrences->size, sizeof(double));
+	size_t weightsIndex = 0;
+
+	LinkedListIterator * iterator = newLinkedListIterator(occurrences);
+	while (hasNext(iterator)) {
+		DocumentOccurrence * occurrence = (DocumentOccurrence *) getValue(iterator);
+		weights[weightsIndex++] = occurrence->count * (log((double) indexTable->size) / occurrences->size);
+	}
+
+	return weights;
 }
