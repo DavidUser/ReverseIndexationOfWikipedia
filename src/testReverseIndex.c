@@ -4,6 +4,9 @@
 #include "HashTable.h"
 #include "hash.h"
 
+#define STRUCTURE HashTable
+#define STRUCTURE_HashTable
+
 /*
    Função hash simplista
 
@@ -24,7 +27,8 @@ size_t hash(const char *key, size_t length) {
    indexTable	tabela com os indices invertidos
    key		chave do tipo string para consulta
 */
-void showHashTable(HashTable * indexTable, const char *key) {
+void showReverseIndex(STRUCTURE * indexTable, const char *key) {
+#ifdef STRUCTURE_HashTable
 	printf("%s: ", key);
 	LinkedList * occurrenceList = getDocumentOccurrence(indexTable, key);
 	if (occurrenceList) {
@@ -50,10 +54,12 @@ void showHashTable(HashTable * indexTable, const char *key) {
 			printf("<%u, %s> ", occurrencesSorted[i]->count, occurrencesSorted[i]->doc_id);
 	}
 	printf("\n");
+#endif
 }
 
 /* Testa a estrutura básica da tabela hash de indices invertidos */
 void testBasicStructure() {
+#ifdef STRUCTURE_HashTable
 	HashTable * indexTable = newHashTable(60, hash);
 	DocumentOccurrence * occurrence = newDocumentOccurrence("doc2", 5);
 	DocumentOccurrence * occurrence2 = newDocumentOccurrence("doc2", 6);
@@ -65,22 +71,25 @@ void testBasicStructure() {
 	insertDocumentOccurrence(indexTable, "cat", occurrence3);
 	insertDocumentOccurrence(indexTable, "dog", occurrenceB0);
 
-	showHashTable(indexTable, "cat");
-	showHashTable(indexTable, "dog");
-	showHashTable(indexTable, "bird");
+	showReverseIndex(indexTable, "cat");
+	showReverseIndex(indexTable, "dog");
+	showReverseIndex(indexTable, "bird");
+#endif
 }
 
 /* Testa a compilação de strings para o preenchimento da tabela hash de indices invertidos */
 void testFillHashTable() {
+#ifdef STRUCTURE_HashTable
 	HashTable * indexTable = newHashTable(60, hash);
 	fillHashTable(indexTable, "cat dog cat", "doc1");
 	fillHashTable(indexTable, "dog dog dog", "doc1");
 	fillHashTable(indexTable, "dog dog dog", "doc2");
 	fillHashTable(indexTable, "dog dog cat", "doc2");
 
-	showHashTable(indexTable, "cat");
-	showHashTable(indexTable, "dog");
-	showHashTable(indexTable, "bird");
+	showReverseIndex(indexTable, "cat");
+	showReverseIndex(indexTable, "dog");
+	showReverseIndex(indexTable, "bird");
+#endif
 }
 
 /* Substitui acentos e demais caracteres especiais
@@ -99,7 +108,9 @@ char wcharToChar(wint_t wc) {
 
 /* Testa a compilação de arquivos para o preenchimento da tabela hash de indices invertidos */
 void testFillHashTableInputed() {
+#ifdef STRUCTURE_HashTable
 	HashTable * indexTable = newHashTable(60, hash);
+#endif
 
 	printf("do you want insert a file? ");
 	char op = getchar();
@@ -124,7 +135,9 @@ void testFillHashTableInputed() {
 				//XXX partial words can be lost, if the word are between this buffer and another
 				// 500 character size buffer works to short abstracts without problem
 				printf("%u bytes readed\n", bufferSize);
+#ifdef STRUCTURE_HashTable
 				fillHashTable(indexTable, buffer, name);
+#endif
 			}
 		}
 
@@ -137,7 +150,7 @@ void testFillHashTableInputed() {
 		printf("type key to search: ");
 		char key[20];
 		scanf("%s", key);
-		showHashTable(indexTable, key);
+		showReverseIndex(indexTable, key);
 	}
 }
 
@@ -165,6 +178,7 @@ void testReadShortAbstracts() {
 			"Select hash function (0-4): " 
 	      );
 
+#ifdef STRUCTURE_HashTable
 	HashTable * indexTable; 
 
 	int selectHash = 1;
@@ -194,6 +208,7 @@ void testReadShortAbstracts() {
 		}
 	}
 
+#endif
 	if (file) {
 		while (!feof(file)) {
 			char *entrie = NULL;
@@ -219,15 +234,19 @@ void testReadShortAbstracts() {
 			totalReaded += bufferSize;
 			printf("%lf %% --  %lu bytes readed of %lu\n", percent, totalReaded, totalFileSize);
 
+#ifdef STRUCTURE_HashTable
 			fillHashTable(indexTable, entrie, doc_id);
+#endif
 		}
 	}
+
+	fclose(file);
 
 	while (1) {
 		printf("type key to search: ");
 		char key[20];
 		scanf("%s", key);
-		showHashTable(indexTable, key);
+		showReverseIndex(indexTable, key);
 	}
 }
 

@@ -4,8 +4,8 @@
 #include <string.h>
 #include <ctype.h>
 #include "LinkedList.h"
-#include "HashTable.h"
 #include "DocumentOccurrence.h"
+#include "HashTable.h"
 #include <math.h>
 
 #define KEY_SIZE 20
@@ -40,13 +40,15 @@ const char * formatKey(const char * key) {
    key		chave, palavra indexada
    occurrence	ocorrência a ser inserida
    */
-void insertDocumentOccurrence(HashTable * indexTable, const char * key, DocumentOccurrence * occurrence) {
+void insertDocumentOccurrence(STRUCTURE * indexTable, const char * key, DocumentOccurrence * occurrence) {
+#ifdefdef STRUCTURE_HashTable
 	key = formatKey(key);
 	size_t index = indexTable->hash(key, 20) % indexTable->capacity;
 	if (!indexTable->occurenceLists[index])
 		indexTable->occurenceLists[index] = newLinkedList();
 	insertStructElementOrdered(indexTable->occurenceLists[index], occurrence, sizeof(DocumentOccurrence), frequentDocumentOccurrence, atRight);
 	++(indexTable->size);
+#endif
 }
 /* pega a lista de ocorrências para uma determinada palavra
    indexTable	tabela de indices invertidos
@@ -54,10 +56,12 @@ void insertDocumentOccurrence(HashTable * indexTable, const char * key, Document
 
    retorna a lista de ocorrência para a palavra buscada no indice
    */
-LinkedList * getDocumentOccurrence(HashTable * indexTable, const char * key) {
+LinkedList * getDocumentOccurrence(STRUCTURE * indexTable, const char * key) {
+#ifdefdef STRUCTURE_HashTable
 	key = formatKey(key);
 	size_t index = indexTable->hash(key, 20) % indexTable->capacity;
 	return indexTable->occurenceLists[index];
+#endif
 }
 
 typedef struct WordFrequence WordFrequence;
@@ -116,7 +120,8 @@ int occurrenceGreater(void * value, void * valueOnList) {
    str		string a ser compilada
    doc_id	identificador do documento
    */
-void fillHashTable(HashTable * indexTable, const char * str, const char * doc_id) {
+void fillHashTable(STRUCTURE * indexTable, const char * str, const char * doc_id) {
+#ifdef STRUCTURE_HashTable
 	LinkedList * words = newLinkedList();
 
 	// get words and quantities from str
@@ -161,6 +166,7 @@ void fillHashTable(HashTable * indexTable, const char * str, const char * doc_id
 			insertDocumentOccurrence(indexTable, wordFrequence->word,
 					newDocumentOccurrence(doc_id, wordFrequence->count));
 	}
+#endif
 }
 
 /* Calcula o peso de cada documento para um termo o qual a lista de ocorrencias é parametro
@@ -169,7 +175,8 @@ void fillHashTable(HashTable * indexTable, const char * str, const char * doc_id
 
    retorna um vetor com os pesos correspondentes de cada documento
    */
-double * weighsOccurrences(HashTable * indexTable, LinkedList * occurrences) {
+double * weighsOccurrences(STRUCTURE * indexTable, LinkedList * occurrences) {
+#ifdef STRUCTURE_HashTable
 	double * weights = calloc(occurrences->size, sizeof(double));
 	size_t weightsIndex = 0;
 
@@ -180,4 +187,5 @@ double * weighsOccurrences(HashTable * indexTable, LinkedList * occurrences) {
 	}
 
 	return weights;
+#endif
 }
