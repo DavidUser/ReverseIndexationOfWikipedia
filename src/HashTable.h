@@ -3,13 +3,47 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include "LinkedList.h"
-#include "HashTable.h"
 #include "DocumentOccurrence.h"
+#include "LinkedList.h"
 #include <math.h>
+
+typedef struct HashTable HashTable;
+typedef size_t (* HashTableHash)(const char * key, size_t lenth);
+struct HashTable {
+	LinkedList ** occurenceLists;
+	size_t size;
+	size_t capacity;
+	HashTableHash hash;
+};
 
 #define KEY_SIZE 20
 
+/* cria instância para estrutura que representa a tabela hash de indices invertidos
+   entries	capacidade da tabela hash
+   hash		função hash utilizada pela estrutura
+
+   retorna a instância
+   */
+HashTable * newHashTable(size_t entries, HashTableHash hash) {
+	HashTable * indexTable = malloc(sizeof(HashTable));
+	indexTable->occurenceLists = calloc(entries, sizeof(LinkedList *));
+	for (size_t i = 0; i < entries; ++i)
+		indexTable->occurenceLists[i] = NULL;
+	indexTable->size = 0;
+	indexTable->capacity = entries;
+	indexTable->hash = hash;
+	return indexTable;
+}
+/* desaloca memória para a tabela de indices invertidos
+   indexTable	tabela hash de indices invertidos
+   */
+void deleteHashTable(HashTable * indexTable) {
+	for (size_t i = 0; i < indexTable->capacity; ++i)
+		if (indexTable->occurenceLists[i])
+			deleteLinkedList(indexTable->occurenceLists[i]);
+	free(indexTable->occurenceLists);
+	free(indexTable);
+}
 /* função de comparação que diz qual occorrência deve preceder em uma lista de ocorrência para dada chave
    occurrence		ocorrência que será inserida na lista
    occurrenceOnList	ocorrência pertence à lista
