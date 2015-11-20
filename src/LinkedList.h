@@ -91,12 +91,12 @@ void insertStructElementOrdered(LinkedList * list, void * value, size_t valueSiz
 	else
 		insertNextNode(list, found, node);
 }
-#define insertElementOrdered(LIST, VALUE, COMPARE, SIDE) insertStructElementOrdered(LIST, VALUE, sizeof(VALUE), COMPARE, SIDE)
+#define insertElementOrdered(LIST, VALUE, COMPARE, SIDE) insertStructElementOrdered(LIST, &VALUE, sizeof(VALUE), COMPARE, SIDE)
 void pushBackStructElement(LinkedList * list, void * value, size_t valueSize) {
 	Node * node = newNode(value, valueSize);
 	insertNextNode(list, list->end, node);
 }
-#define pushBackElement(LIST, VALUE) pushBackStructElement(LIST, VALUE, sizeof(VALUE))
+#define pushBackElement(LIST, VALUE) pushBackStructElement(LIST, &VALUE, sizeof(VALUE))
 void removeNode(LinkedList *list, Node * node) {
 	if (!node)
 		return;
