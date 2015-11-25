@@ -35,19 +35,27 @@ const char * formatKey(const char * key) {
 	return validKey;
 }
 
+struct ReverseIndex {
+	//TODO need contain the internal structure
+	//TODO need contain the relevant function pointers
+	size_t size;
+} reverseIndex;
+
 /* insere uma ocorrência na tabela de indices invertidos
    indexTable	tabela hash de indices invertidos
    key		chave, palavra indexada
    occurrence	ocorrência a ser inserida
    */
 void insertDocumentOccurrence(STRUCTURE * indexTable, const char * key, DocumentOccurrence * occurrence) {
-#ifdefdef STRUCTURE_HashTable
 	key = formatKey(key);
-	size_t index = indexTable->hash(key, 20) % indexTable->capacity;
-	if (!indexTable->occurenceLists[index])
-		indexTable->occurenceLists[index] = newLinkedList();
-	insertStructElementOrdered(indexTable->occurenceLists[index], occurrence, sizeof(DocumentOccurrence), frequentDocumentOccurrence, atRight);
-	++(indexTable->size);
+#ifdef STRUCTURE_HashTable
+	LinkedList * list = searchElementOnHashTable(indexTable, key);
+	if (!list) {
+		list = newLinkedList();
+		insertStructElementOnHashTable(indexTable, key, list, 0);
+	}
+	insertStructElementOrdered(list, occurrence, sizeof(DocumentOccurrence), frequentDocumentOccurrence, atRight);
+	++(reverseIndex.size); //TODO the reverse index need save the total ammount of document occurrences indexed
 #endif
 }
 /* pega a lista de ocorrências para uma determinada palavra
@@ -57,10 +65,9 @@ void insertDocumentOccurrence(STRUCTURE * indexTable, const char * key, Document
    retorna a lista de ocorrência para a palavra buscada no indice
    */
 LinkedList * getDocumentOccurrence(STRUCTURE * indexTable, const char * key) {
-#ifdefdef STRUCTURE_HashTable
 	key = formatKey(key);
-	size_t index = indexTable->hash(key, 20) % indexTable->capacity;
-	return indexTable->occurenceLists[index];
+#ifdef STRUCTURE_HashTable
+	return (LinkedList *) searchElementOnHashTable(indexTable, key);
 #endif
 }
 
@@ -175,17 +182,15 @@ void fillHashTable(STRUCTURE * indexTable, const char * str, const char * doc_id
 
    retorna um vetor com os pesos correspondentes de cada documento
    */
-double * weighsOccurrences(STRUCTURE * indexTable, LinkedList * occurrences) {
-#ifdef STRUCTURE_HashTable
+double * weighsOccurrences(LinkedList * occurrences) {
 	double * weights = calloc(occurrences->size, sizeof(double));
 	size_t weightsIndex = 0;
 
 	LinkedListIterator * iterator = newLinkedListIterator(occurrences);
 	while (hasNext(iterator)) {
 		DocumentOccurrence * occurrence = (DocumentOccurrence *) getValue(iterator);
-		weights[weightsIndex++] = occurrence->count * (log((double) indexTable->size) / occurrences->size);
+		weights[weightsIndex++] = occurrence->count * (log((double) reverseIndex.size) / occurrences->size);
 	}
 
 	return weights;
-#endif
 }
