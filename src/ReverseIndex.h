@@ -4,71 +4,12 @@
 #include <string.h>
 #include <ctype.h>
 #include "LinkedList.h"
+#include "DocumentOccurrence.h"
+#include "HashTable.h"
 #include <math.h>
 
-typedef struct DocumentOccurrence DocumentOccurrence;
-struct DocumentOccurrence {
-	char * doc_id;
-	size_t count;
-};
-
-typedef struct ReverseIndex ReverseIndex;
-typedef size_t (* ReverseIndexHash)(const char * key, size_t lenth);
-struct ReverseIndex {
-	LinkedList ** occurenceLists;
-	size_t size;
-	size_t capacity;
-	ReverseIndexHash hash;
-};
-
-#define DOC_ID_SIZE 200
 #define KEY_SIZE 20
 
-/* cria uma instância para a estrutura que representa a ocorrência de uma chave em um documento
-   doc_id	identificador do documento
-   count	número de ocorrências no documento
-
-   retorna a instância
-   */
-DocumentOccurrence * newDocumentOccurrence(const char * doc_id, const size_t count) {
-	DocumentOccurrence * occurrence = malloc(sizeof(DocumentOccurrence));
-	occurrence->doc_id = calloc(sizeof(char), DOC_ID_SIZE);
-	memcpy(occurrence->doc_id, doc_id, DOC_ID_SIZE);
-	occurrence->count = count;
-	return occurrence;
-}
-/* deleta a instância da estrutura que representa a ocorrência de uma palavra no documento liberando a memórica
-   occurrence	instância
-   */
-void deleteDocumentOccurrence(DocumentOccurrence * occurrence) {
-	free(occurrence);
-}
-/* cria instância para estrutura que representa a tabela hash de indices invertidos
-   entries	capacidade da tabela hash
-   hash		função hash utilizada pela estrutura
-
-   retorna a instância
-   */
-ReverseIndex * newReverseIndex(size_t entries, ReverseIndexHash hash) {
-	ReverseIndex * indexTable = malloc(sizeof(ReverseIndex));
-	indexTable->occurenceLists = calloc(entries, sizeof(LinkedList *));
-	for (size_t i = 0; i < entries; ++i)
-		indexTable->occurenceLists[i] = NULL;
-	indexTable->size = 0;
-	indexTable->capacity = entries;
-	indexTable->hash = hash;
-	return indexTable;
-}
-/* desaloca memória para a tabela de indices invertidos
-   indexTable	tabela hash de indices invertidos
-   */
-void deleteReverseIndex(ReverseIndex * indexTable) {
-	for (size_t i = 0; i < indexTable->capacity; ++i)
-		if (indexTable->occurenceLists[i])
-			deleteLinkedList(indexTable->occurenceLists[i]);
-	free(indexTable->occurenceLists);
-	free(indexTable);
-}
 /* função de comparação que diz qual occorrência deve preceder em uma lista de ocorrência para dada chave
    occurrence		ocorrência que será inserida na lista
    occurrenceOnList	ocorrência pertence à lista
@@ -94,18 +35,28 @@ const char * formatKey(const char * key) {
 	return validKey;
 }
 
+struct ReverseIndex {
+	//TODO need contain the internal structure
+	//TODO need contain the relevant function pointers
+	size_t size;
+} reverseIndex;
+
 /* insere uma ocorrência na tabela de indices invertidos
    indexTable	tabela hash de indices invertidos
    key		chave, palavra indexada
    occurrence	ocorrência a ser inserida
    */
-void insertDocumentOccurrence(ReverseIndex * indexTable, const char * key, DocumentOccurrence * occurrence) {
+void insertDocumentOccurrence(STRUCTURE * indexTable, const char * key, DocumentOccurrence * occurrence) {
 	key = formatKey(key);
-	size_t index = indexTable->hash(key, 20) % indexTable->capacity;
-	if (!indexTable->occurenceLists[index])
-		indexTable->occurenceLists[index] = newLinkedList();
-	insertStructElementOrdered(indexTable->occurenceLists[index], occurrence, sizeof(DocumentOccurrence), frequentDocumentOccurrence, atRight);
-	++(indexTable->size);
+#ifdef STRUCTURE_HashTable
+	LinkedList * list = searchElementOnHashTable(indexTable, key);
+	if (!list) {
+		list = newLinkedList();
+		insertStructElementOnHashTable(indexTable, key, list, 0);
+	}
+	insertStructElementOrdered(list, occurrence, sizeof(DocumentOccurrence), frequentDocumentOccurrence, atRight);
+	++(reverseIndex.size); //TODO the reverse index need save the total ammount of document occurrences indexed
+#endif
 }
 /* pega a lista de ocorrências para uma determinada palavra
    indexTable	tabela de indices invertidos
@@ -113,10 +64,11 @@ void insertDocumentOccurrence(ReverseIndex * indexTable, const char * key, Docum
 
    retorna a lista de ocorrência para a palavra buscada no indice
    */
-LinkedList * getDocumentOccurrence(ReverseIndex * indexTable, const char * key) {
+LinkedList * getDocumentOccurrence(STRUCTURE * indexTable, const char * key) {
 	key = formatKey(key);
-	size_t index = indexTable->hash(key, 20) % indexTable->capacity;
-	return indexTable->occurenceLists[index];
+#ifdef STRUCTURE_HashTable
+	return (LinkedList *) searchElementOnHashTable(indexTable, key);
+#endif
 }
 
 typedef struct WordFrequence WordFrequence;
@@ -175,7 +127,8 @@ int occurrenceGreater(void * value, void * valueOnList) {
    str		string a ser compilada
    doc_id	identificador do documento
    */
-void fillReverseIndex(ReverseIndex * indexTable, const char * str, const char * doc_id) {
+void fillHashTable(STRUCTURE * indexTable, const char * str, const char * doc_id) {
+#ifdef STRUCTURE_HashTable
 	LinkedList * words = newLinkedList();
 
 	// get words and quantities from str
@@ -220,6 +173,7 @@ void fillReverseIndex(ReverseIndex * indexTable, const char * str, const char * 
 			insertDocumentOccurrence(indexTable, wordFrequence->word,
 					newDocumentOccurrence(doc_id, wordFrequence->count));
 	}
+#endif
 }
 
 /* Calcula o peso de cada documento para um termo o qual a lista de ocorrencias é parametro
@@ -228,14 +182,14 @@ void fillReverseIndex(ReverseIndex * indexTable, const char * str, const char * 
 
    retorna um vetor com os pesos correspondentes de cada documento
    */
-double * weighsOccurrences(ReverseIndex * indexTable, LinkedList * occurrences) {
+double * weighsOccurrences(LinkedList * occurrences) {
 	double * weights = calloc(occurrences->size, sizeof(double));
 	size_t weightsIndex = 0;
 
 	LinkedListIterator * iterator = newLinkedListIterator(occurrences);
 	while (hasNext(iterator)) {
 		DocumentOccurrence * occurrence = (DocumentOccurrence *) getValue(iterator);
-		weights[weightsIndex++] = occurrence->count * (log((double) indexTable->size) / occurrences->size);
+		weights[weightsIndex++] = occurrence->count * (log((double) reverseIndex.size) / occurrences->size);
 	}
 
 	return weights;
