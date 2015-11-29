@@ -77,8 +77,11 @@ void * tryInsertStructElementOnTrie(Trie * trie, const char * key, void * value,
 	// put the content on last character (end character, null character)
 	node = malloc(sizeof(TrieNode));
 	node->partialKey = endChar;
-	node->content = malloc(valueSize);
-	memcpy(node->content, value, valueSize);
+	if (valueSize) {
+		node->content = malloc(valueSize);
+		memcpy(node->content, value, valueSize);
+	} else
+		node->content = value;
 	pushBackStructElement(current->postfixes, node, sizeof(TrieNode));
 	++trie->ammountOfNodes;
 	++trie->size;
@@ -101,5 +104,5 @@ void * searchElementOnTrie(Trie * trie, const char * key) {
 	}
 	const char endChar = '\0';
 	TrieNode * node =  searchElement(current->postfixes, &endChar, characterOnTrieNode);
-	return node->content;
+	return node? node->content : NULL;
 }

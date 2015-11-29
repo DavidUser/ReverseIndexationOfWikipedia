@@ -3,10 +3,16 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <math.h>
 #include "LinkedList.h"
 #include "DocumentOccurrence.h"
+
+#ifdef STRUCTURE_HashTable
 #include "HashTable.h"
-#include <math.h>
+#endif
+#ifdef STRUCTURE_Trie
+#include "Trie.h"
+#endif
 
 #define KEY_SIZE 20
 
@@ -54,9 +60,17 @@ void insertDocumentOccurrence(STRUCTURE * indexTable, const char * key, Document
 		list = newLinkedList();
 		insertStructElementOnHashTable(indexTable, key, list, 0);
 	}
+#endif
+#ifdef STRUCTURE_Trie
+	LinkedList * list = searchElementOnTrie(indexTable, key);
+	if (!list) {
+		list = newLinkedList();
+		tryInsertStructElementOnTrie(indexTable, key, list, 0);
+	}
+	
+#endif
 	insertStructElementOrdered(list, occurrence, sizeof(DocumentOccurrence), frequentDocumentOccurrence, atRight);
 	++(reverseIndex.size); //TODO the reverse index need save the total ammount of document occurrences indexed
-#endif
 }
 /* pega a lista de ocorrências para uma determinada palavra
    indexTable	tabela de indices invertidos
@@ -67,7 +81,10 @@ void insertDocumentOccurrence(STRUCTURE * indexTable, const char * key, Document
 LinkedList * getDocumentOccurrence(STRUCTURE * indexTable, const char * key) {
 	key = formatKey(key);
 #ifdef STRUCTURE_HashTable
-	return (LinkedList *) searchElementOnHashTable(indexTable, key);
+	return searchElementOnHashTable(indexTable, key);
+#endif
+#ifdef STRUCTURE_Trie
+	return searchElementOnTrie(indexTable, key);
 #endif
 }
 
@@ -122,13 +139,12 @@ int occurrenceGreater(void * value, void * valueOnList) {
 	return strcmp(((DocumentOccurrence *) value)->doc_id, ((DocumentOccurrence *) valueOnList)->doc_id) == 0;
 }
 
-/* preenche uma tabela hash de indices invertidos partindo de uma string
+/* preenche uma estrutura de indices invertidos partindo de uma string
    indexTable	tabela hash de indices invertidos
    str		string a ser compilada
    doc_id	identificador do documento
    */
-void fillHashTable(STRUCTURE * indexTable, const char * str, const char * doc_id) {
-#ifdef STRUCTURE_HashTable
+void fillStructure(STRUCTURE * indexTable, const char * str, const char * doc_id) {
 	LinkedList * words = newLinkedList();
 
 	// get words and quantities from str
@@ -173,7 +189,6 @@ void fillHashTable(STRUCTURE * indexTable, const char * str, const char * doc_id
 			insertDocumentOccurrence(indexTable, wordFrequence->word,
 					newDocumentOccurrence(doc_id, wordFrequence->count));
 	}
-#endif
 }
 
 /* Calcula o peso de cada documento para um termo o qual a lista de ocorrencias é parametro
