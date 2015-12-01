@@ -30,27 +30,77 @@ size_t hash(const char *key, size_t length) {
 */
 void showReverseIndex(STRUCTURE * indexTable, const char *key) {
 	printf("%s: ", key);
-	LinkedList * occurrenceList = getDocumentOccurrence(indexTable, key);
-	if (occurrenceList) {
+	char * keyCopy = strdup(key);
+	size_t numberOfTerms = 1;
+	for (size_t i = 0; key[i] != '\0'; ++i) if (key[i] == ' ') ++numberOfTerms;
+	char ** keyTerm = calloc(numberOfTerms, sizeof(char *));
+	size_t iKeyTerm = 0;
+	for (char * part = strtok(keyCopy, " ");
+			part; part = strtok(NULL, " "))
+		keyTerm[iKeyTerm++] = strdup(part);
+	LinkedList ** occurrenceList = calloc(numberOfTerms, sizeof(LinkedList *));
+	LinkedList * occurrenceListUnified = newLinkedList(); //a unified list, with occurrence of all search terms
+	for (size_t i = 0; i < numberOfTerms; ++i) {
+		occurrenceList[i] = getDocumentOccurrence(indexTable, keyTerm[i]);
+		if (occurrenceList[i])
+			//for all document occurrences
+			for (LinkedListIterator * iterator = newLinkedListIterator(occurrenceList[i]);
+					hasNext(iterator);) {
+				DocumentOccurrence * documentOccurrence = getValue(iterator);
+				DocumentOccurrence * occurrenceOnUnified = searchElement(occurrenceListUnified, documentOccurrence->doc_id, occurrenceEqual);
+				//if term found on unifiedList increase the occurrences frequence
+				if (occurrenceOnUnified)
+					occurrenceOnUnified->count += documentOccurrence->count;
+				//else insert a new DocumentOccurrece on unifiedList with this frequence found
+				else
+					pushBackStructElement(occurrenceListUnified, documentOccurrence, sizeof(DocumentOccurrence));
+			}
+	}
+	if (occurrenceListUnified->size) {
 		//calcula os pesos de cada documento, documentos sem o termo tem peso 0 e não precisam ser computados
-		double * weigthts = weighsOccurrences(occurrenceList);
-		size_t * rank = calloc(occurrenceList->size, sizeof(size_t));
-		for (int i = 0; i < occurrenceList->size; ++i)
-			for (int j = 0; j < occurrenceList->size; ++j)
-				if (weigthts[i] < weigthts[j] || (weigthts[i] == weigthts[j] && i < j))
+		double ** weights = calloc(numberOfTerms, sizeof(double *));
+		for (size_t i = 0; i < numberOfTerms; ++i)
+	       		weights[i] = weighsOccurrences(occurrenceList[i]);
+		//calcula a relevancia de um documento
+		double * relevance = calloc(occurrenceListUnified->size, sizeof(double));
+		// for all documents on unifiedList
+		int iRelevance = 0; 
+		for (LinkedListIterator * iteratorUnified = newLinkedListIterator(occurrenceListUnified);
+				hasNext(iteratorUnified); ++iRelevance) {
+			DocumentOccurrence * occurrenceUnified = getValue(iteratorUnified);
+			// found the document weigthts for each term 
+			// sum all weights relative to a document and
+			// put this sum on relevance
+			relevance[iRelevance] = 0;
+			for (size_t i = 0; i < numberOfTerms; ++i) {
+				size_t iFoundDocument = 0;
+				for (LinkedListIterator * iterator = newLinkedListIterator(occurrenceList[i]);
+						hasNext(iterator); ++iFoundDocument) {
+					DocumentOccurrence * occurrence = getValue(iterator);
+					if (strcmp(occurrence->doc_id, occurrenceUnified->doc_id)) break;
+				}
+				if (iFoundDocument != occurrenceList[i]->size)
+					relevance[iRelevance] += weights[i][iFoundDocument];
+			}
+		}
+
+		size_t * rank = calloc(occurrenceListUnified->size, sizeof(size_t));
+		for (int i = 0; i < occurrenceListUnified->size; ++i)
+			for (int j = 0; j < occurrenceListUnified->size; ++j)
+				if (relevance[i] < relevance[j] || (relevance[i] == relevance[j] && i < j))
 					++rank[i];
 		
 		// constroi um vetor de ponteiros ordenado pela relevancia de cada documento
-		DocumentOccurrence ** occurrencesSorted = calloc(occurrenceList->size, sizeof(DocumentOccurrence *));
+		DocumentOccurrence ** occurrencesSorted = calloc(occurrenceListUnified->size, sizeof(DocumentOccurrence *));
 		int sortedIndex = 0;
-		LinkedListIterator * it = newLinkedListIterator(occurrenceList);
+		LinkedListIterator * it = newLinkedListIterator(occurrenceListUnified);
 		while (hasNext(it)) {
 			DocumentOccurrence * occurrence = (DocumentOccurrence *) getValue(it);
 			occurrencesSorted[rank[sortedIndex++]] = occurrence;
 		}
 
 		// percorre o vetor ordenado pela relevancia imprimindo no console
-		for (int i = 0; i < occurrenceList->size; ++i)
+		for (int i = 0; i < occurrenceListUnified->size; ++i)
 			printf("<%u, %s> ", occurrencesSorted[i]->count, occurrencesSorted[i]->doc_id);
 	}
 	printf("\n\n");
@@ -159,7 +209,7 @@ void testArchiveFillStructure() {
 	char key[20];
 	do {
 		printf("type key to search: ");
-		scanf("%s", key);
+		fgets(key, 20, stdin);
 		showReverseIndex(indexTable, key);
 	} while (key[0] != '*');
 }
@@ -253,10 +303,16 @@ void testReadShortAbstracts() {
 
 	fclose(file);
 
+
+	getchar();
+
 	char key[20];
 	do {
 		printf("type key to search: ");
-		scanf("%s", key);
+		char * inputLine = NULL;
+		//scanf("%s", key);
+		fgets(key, 20, stdin);
+		key[strcspn(key, "\n")] = '\0';
 		showReverseIndex(indexTable, key);
 	} while (key[0] != '*');
 }
