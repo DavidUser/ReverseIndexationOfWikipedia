@@ -62,14 +62,12 @@ void insertDocumentOccurrence(STRUCTURE * indexTable, const char * key, Document
 	}
 #endif
 #ifdef STRUCTURE_Trie
-	LinkedList * list = searchElementOnTrie(indexTable, key);
-	if (!list) {
-		list = newLinkedList();
-		tryInsertStructElementOnTrie(indexTable, key, list, 0);
-	}
-	
+	LinkedList * list = newLinkedList();
+	LinkedList * existentList = tryInsertStructElementOnTrie(indexTable, key, list, 0);
+	if (existentList)
+		list = existentList;
 #endif
-	insertStructElementOrdered(list, occurrence, sizeof(DocumentOccurrence), frequentDocumentOccurrence, atRight);
+	pushBackStructElement(list, occurrence, sizeof(DocumentOccurrence));
 	++(reverseIndex.size); //TODO the reverse index need save the total ammount of document occurrences indexed
 }
 /* pega a lista de ocorrências para uma determinada palavra
