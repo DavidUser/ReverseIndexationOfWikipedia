@@ -6,6 +6,7 @@
 #include <math.h>
 #include "LinkedList.h"
 #include "DocumentOccurrence.h"
+#include "time.h" // TODO only to test
 
 #ifdef STRUCTURE_HashTable
 #include "HashTable.h"
@@ -142,9 +143,8 @@ int occurrenceGreater(void * value, void * valueOnList) {
    str		string a ser compilada
    doc_id	identificador do documento
    */
+double timeSearchingOnList = 0; // TODO only to test
 void fillStructure(STRUCTURE * indexTable, const char * str, const char * doc_id) {
-	LinkedList * words = newLinkedList();
-
 	// get words and quantities from str
 	while (*str) {
 		if (!isalnum(*str)) {
@@ -159,34 +159,27 @@ void fillStructure(STRUCTURE * indexTable, const char * str, const char * doc_id
 		while (word_i < 20)
 			word[word_i++] = '\0';
 
-		WordFrequence * found = ((WordFrequence *) searchElement(words, word, wordFrequenceEqual));
-		if (found)
-			++(found->count);
-		else
-			pushBackStructElement(words, newWordFrequence(word, 1), sizeof(WordFrequence));
-	}
-
-	LinkedListIterator * iterator = newLinkedListIterator(words);
-	while(hasNext(iterator)) {
-		WordFrequence * wordFrequence = (WordFrequence *) getValue(iterator);
-
-	// procurar estas palavras no indice invertido
-		LinkedList * occurrenceList = getDocumentOccurrence(indexTable, wordFrequence->word);
+	// procurar esta palavra no indice invertido
+		LinkedList * occurrenceList = getDocumentOccurrence(indexTable, word);
 	// se encontrar lista com essa entrada percorrer a lista buscando o doc_id
 		if (occurrenceList) {
+			time_t startTime = time(NULL); // TODO only to test
 			DocumentOccurrence * found = searchElement(occurrenceList, doc_id, occurrenceEqual);
+			timeSearchingOnList += difftime(time(NULL), startTime); // TODO only to test
 	// se encontrar o doc_id somar a occorrencia das palavras
 			if (found)
-				found->count += wordFrequence->count;
+				++found->count;
 	// se nao encontrar o doc_id adicionar entrada na lista com o doc_id e a quantidade
-			else
-				insertDocumentOccurrence(indexTable, wordFrequence->word,
-					newDocumentOccurrence(doc_id, wordFrequence->count));
-	// se nao entrada da palavra inserir no indice uma entrada com o doc_id e a quantidade
+			else {
+				pushBackStructElement(occurrenceList, newDocumentOccurrence(doc_id, 1), sizeof(DocumentOccurrence));
+				++(reverseIndex.size); //TODO the reverse index need save the total ammount of document occurrences indexed
+			}
+	// se nao encontrar entrada da palavra inserir no indice uma entrada com o doc_id e a quantidade
 		} else
-			insertDocumentOccurrence(indexTable, wordFrequence->word,
-					newDocumentOccurrence(doc_id, wordFrequence->count));
+			insertDocumentOccurrence(indexTable, word,
+					newDocumentOccurrence(doc_id, 1));
 	}
+	printf("time elapsed searching on list: %f\n", timeSearchingOnList); // TODO only to test
 }
 
 /* Calcula o peso de cada documento para um termo o qual a lista de ocorrencias é parametro
