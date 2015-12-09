@@ -22,5 +22,14 @@ main() {
 		else
 			printf("age not found!\n");
 	} while (name[0] != '*');
+
+	LinkedList * allElements = getAllElements(trie);
+	for (LinkedListIterator * iterator = newLinkedListIterator(allElements);
+			hasNext(iterator);) {
+		int * age = getValue(iterator);
+		printf("%d ", *age);
+	}
+	printf("\n");
+
 	deleteTrie(trie);
 }

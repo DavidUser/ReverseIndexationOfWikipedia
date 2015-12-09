@@ -106,3 +106,32 @@ void * searchElementOnTrie(Trie * trie, const char * key) {
 	TrieNode * node =  searchElement(current->postfixes, &endChar, characterOnTrieNode);
 	return node? node->content : NULL;
 }
+
+/* Retorna uma lista com todos os elementos inseridos na TRIE
+   trie árvore
+
+   retorna uma lista para os elementos contidos na lista, 
+   atenção não desaloque a memória partindo desta lista isto pode quebrar a TRIE
+   */
+LinkedList * getAllElements(Trie * trie) {
+	if (!trie) return NULL;
+	LinkedList * allElements = newLinkedList(); // list of empty pointers
+	size_t stackSize = 0;
+	LinkedListIterator *iteratorStack[1000]; // TODO replace fixed stack size by dynamic structure
+
+	TrieNode * current = trie->root;
+	iteratorStack[stackSize++] = newLinkedListIterator(current->postfixes); // push on stack
+	while (stackSize > 0) {
+		while (hasNext(iteratorStack[stackSize - 1])) {
+			current = getValue(iteratorStack[stackSize - 1]);
+			if (current->content)
+				pushBackStructElement(allElements, current->content, 0); // put value pointer value to list, without copy
+			if (!current->postfixes) break;
+			iteratorStack[stackSize++] = newLinkedListIterator(current->postfixes);
+		}
+		free(iteratorStack[--stackSize]);
+	}
+	
+	return allElements;
+}
+

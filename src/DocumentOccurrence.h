@@ -1,7 +1,7 @@
 #pragma once
 
+#include <string.h>
 #include <stdlib.h>
-
 
 typedef struct DocumentOccurrence DocumentOccurrence;
 struct DocumentOccurrence {
@@ -19,8 +19,7 @@ struct DocumentOccurrence {
    */
 DocumentOccurrence * newDocumentOccurrence(const char * doc_id, const size_t count) {
 	DocumentOccurrence * occurrence = malloc(sizeof(DocumentOccurrence));
-	occurrence->doc_id = calloc(sizeof(char), DOC_ID_SIZE);
-	memcpy(occurrence->doc_id, doc_id, DOC_ID_SIZE);
+	occurrence->doc_id = strndup(doc_id, DOC_ID_SIZE);
 	occurrence->count = count;
 	return occurrence;
 }

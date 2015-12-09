@@ -61,14 +61,18 @@ void insertDocumentOccurrence(STRUCTURE * indexTable, const char * key, Document
 		list = newLinkedList();
 		insertStructElementOnHashTable(indexTable, key, list, 0);
 	}
+	//TODO replace by a hash instead a list
+	pushBackStructElement(list, occurrence, sizeof(DocumentOccurrence));
 #endif
 #ifdef STRUCTURE_Trie
-	LinkedList * list = newLinkedList();
-	LinkedList * existentList = tryInsertStructElementOnTrie(indexTable, key, list, 0);
-	if (existentList)
+	Trie * list = newTrie();
+	Trie * existentList = tryInsertStructElementOnTrie(indexTable, key, list, 0);
+	if (existentList) {
+		deleteTrie(list);
 		list = existentList;
+	}
+	tryInsertStructElementOnTrie(list, occurrence->doc_id, occurrence, 0);
 #endif
-	pushBackStructElement(list, occurrence, sizeof(DocumentOccurrence));
 	++(reverseIndex.size); //TODO the reverse index need save the total ammount of document occurrences indexed
 }
 /* pega a lista de ocorrências para uma determinada palavra
@@ -77,7 +81,7 @@ void insertDocumentOccurrence(STRUCTURE * indexTable, const char * key, Document
 
    retorna a lista de ocorrência para a palavra buscada no indice
    */
-LinkedList * getDocumentOccurrence(STRUCTURE * indexTable, const char * key) {
+STRUCTURE * getDocumentOccurrence(STRUCTURE * indexTable, const char * key) {
 	key = formatKey(key);
 #ifdef STRUCTURE_HashTable
 	return searchElementOnHashTable(indexTable, key);
@@ -87,35 +91,10 @@ LinkedList * getDocumentOccurrence(STRUCTURE * indexTable, const char * key) {
 #endif
 }
 
-typedef struct WordFrequence WordFrequence;
-struct WordFrequence {
-	const char * word;
-	size_t count;
-};
-
-/* cria uma nova instância de estrutura que define o par palavra e número de ocorrências
-   word		palavra encontrada
-   count	número de vezes que a palavra foi encontrada
-
-   retorna instância
-   */
-WordFrequence * newWordFrequence(const char *word, size_t count) {
-	WordFrequence *wordFrequence = malloc(sizeof(WordFrequence));
-	wordFrequence->word = malloc(20);
-	strcpy(wordFrequence->word, word);
-	wordFrequence->count = count;
-
-	return wordFrequence;
-}
-
-/* compara uma palavra a palavra contida em uma estrutura de frequencia
-   value	palavra verificada
-   valueOnList	estrutura que contem palavra e frequência
-
-   retorna um valor diferente de 0 se a palavra corresponde a estrutura
-   */
-int wordFrequenceEqual(void * value, void * valueOnList) {
-	return strcmp((char *) value, ((WordFrequence *) valueOnList)->word) == 0;
+LinkedList * getDocumentOccurrenceList(STRUCTURE * indexTable, const char * key) {
+#ifdef STRUCTURE_Trie
+	return getAllElements(getDocumentOccurrence(indexTable, key));
+#endif
 }
 
 /* compara um identificador de documento a uma occorrência
@@ -153,27 +132,27 @@ void fillStructure(STRUCTURE * indexTable, const char * str, const char * doc_id
 		}
 
 		size_t word_i = 0;
-		char * word = malloc(20);
+		char word[20];
 		for (; word_i < 20 && isalnum(*str); ++str, ++word_i)
 			word[word_i] = (char) tolower(*str);
 		while (word_i < 20)
 			word[word_i++] = '\0';
 
 	// procurar esta palavra no indice invertido
-		LinkedList * occurrenceList = getDocumentOccurrence(indexTable, word);
+		Trie * occurrenceList = getDocumentOccurrence(indexTable, word);
 	// se encontrar lista com essa entrada percorrer a lista buscando o doc_id
 		if (occurrenceList) {
 			time_t startTime = time(NULL); // TODO only to test
-			DocumentOccurrence * found = searchElement(occurrenceList, doc_id, occurrenceEqual);
+			// TODO replace linked list search by trie search
+			DocumentOccurrence * found = searchElementOnTrie(occurrenceList, doc_id);
 			timeSearchingOnList += difftime(time(NULL), startTime); // TODO only to test
 	// se encontrar o doc_id somar a occorrencia das palavras
 			if (found)
 				++found->count;
 	// se nao encontrar o doc_id adicionar entrada na lista com o doc_id e a quantidade
-			else {
-				pushBackStructElement(occurrenceList, newDocumentOccurrence(doc_id, 1), sizeof(DocumentOccurrence));
-				++(reverseIndex.size); //TODO the reverse index need save the total ammount of document occurrences indexed
-			}
+			else
+				insertDocumentOccurrence(indexTable, word, 
+						newDocumentOccurrence(doc_id, 1));
 	// se nao encontrar entrada da palavra inserir no indice uma entrada com o doc_id e a quantidade
 		} else
 			insertDocumentOccurrence(indexTable, word,
@@ -197,6 +176,7 @@ double * weighsOccurrences(LinkedList * occurrences) {
 		DocumentOccurrence * occurrence = (DocumentOccurrence *) getValue(iterator);
 		weights[weightsIndex++] = occurrence->count * (log((double) reverseIndex.size) / occurrences->size);
 	}
+	free(iterator);
 
 	return weights;
 }

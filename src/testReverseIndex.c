@@ -41,7 +41,8 @@ void showReverseIndex(STRUCTURE * indexTable, const char *key) {
 	LinkedList ** occurrenceList = calloc(numberOfTerms, sizeof(LinkedList *));
 	LinkedList * occurrenceListUnified = newLinkedList(); //a unified list, with occurrence of all search terms
 	for (size_t i = 0; i < numberOfTerms; ++i) {
-		occurrenceList[i] = getDocumentOccurrence(indexTable, keyTerm[i]);
+		//XXX get document occurrence return STRUCTURE type, not a linked list
+		occurrenceList[i] = getDocumentOccurrenceList(indexTable, keyTerm[i]); //TODO convert Trie to list
 		if (occurrenceList[i])
 			//for all document occurrences
 			for (LinkedListIterator * iterator = newLinkedListIterator(occurrenceList[i]);
@@ -278,8 +279,10 @@ void testReadShortAbstracts() {
 			size_t bufferSize = 0;
 			getline(&entrie, &bufferSize, file);
 
-			if (entrie[0] != '<') // if it is't a entrie
+			if (entrie[0] != '<') { // if it is't a entrie
+				free(entrie);
 				continue;
+			}
 			// get doc id
 			char doc_id[500];
 			size_t doc_idSize = 0;
@@ -298,6 +301,7 @@ void testReadShortAbstracts() {
 			totalReaded += bufferSize;
 			printf("%lf %% --  %lu bytes readed of %lu\n", percent, totalReaded, totalFileSize);
 			fillStructure(indexTable, entrie, doc_id);
+			free(entrie);
 		}
 	}
 
@@ -309,12 +313,15 @@ void testReadShortAbstracts() {
 	char key[20];
 	do {
 		printf("type key to search: ");
-		char * inputLine = NULL;
-		//scanf("%s", key);
 		fgets(key, 20, stdin);
 		key[strcspn(key, "\n")] = '\0';
 		showReverseIndex(indexTable, key);
 	} while (key[0] != '*');
+
+	//TODO delete when Hash table
+#ifdef STRUCTURE_Trie
+	//deleteTrie(indexTable);
+#endif
 }
 
 int main() {

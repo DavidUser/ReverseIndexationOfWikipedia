@@ -14,8 +14,11 @@ struct Node {
 };
 Node * newNode(void * value, size_t size) {
 	Node * node = malloc(sizeof(Node));
-	node->value = malloc(size);
-	memcpy(node->value, value, size);
+	if (size) {
+		node->value = malloc(size);
+		memcpy(node->value, value, size);
+	} else
+		node->value = value;
 	node->next = 0;
 	node->previous = 0;
 }
