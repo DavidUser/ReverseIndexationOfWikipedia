@@ -139,12 +139,18 @@ void fillStructure(STRUCTURE * indexTable, const char * str, const char * doc_id
 			word[word_i++] = '\0';
 
 	// procurar esta palavra no indice invertido
-		Trie * occurrenceList = getDocumentOccurrence(indexTable, word);
+		STRUCTURE * occurrenceList = getDocumentOccurrence(indexTable, word);
 	// se encontrar lista com essa entrada percorrer a lista buscando o doc_id
 		if (occurrenceList) {
 			time_t startTime = time(NULL); // TODO only to test
 			// TODO replace linked list search by trie search
-			DocumentOccurrence * found = searchElementOnTrie(occurrenceList, doc_id);
+			DocumentOccurrence * found = 
+#ifdef STRUCTURE_HashTable
+				searchElement(occurrenceList, doc_id, occurrenceEqual); // TODO replace by nestled hash table
+#endif
+#ifdef STRUCTURE_Trie
+				searchElementOnTrie(occurrenceList, doc_id);
+#endif
 			timeSearchingOnList += difftime(time(NULL), startTime); // TODO only to test
 	// se encontrar o doc_id somar a occorrencia das palavras
 			if (found)

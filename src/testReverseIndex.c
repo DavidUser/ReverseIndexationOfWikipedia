@@ -2,8 +2,10 @@
 #include <stdlib.h>
 #include <wchar.h>
 
-#define STRUCTURE Trie
-#define STRUCTURE_Trie
+#define STRUCTURE HashTable
+#define STRUCTURE_HashTable
+// #define STRUCTURE Trie
+// #define STRUCTURE_Trie
 
 #include "ReverseIndex.h"
 #include "hash.h"
